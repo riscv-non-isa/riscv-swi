@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: CC-BY-4.0
+[[riscv-doc-template]]
+:description: RISC-V Platform Specification for Software Interrupts
+:company: RISC-V
+:revdate:  February 3, 2022
+:revnumber: 1.0-draft1 (stable)
+:revremark: This document is in Draft state.  Change should be expected.
+:url-riscv: http://riscv.org
+:doctype: book
+:preface-title: Preamble
+:colophon:
+:appendix-caption: Appendix
+:imagesdir: images
+:title-logo-image: image:risc-v_logo.svg[pdfwidth=3.25in,align=center]
+// Settings:
+:experimental:
+:reproducible:
+:WaveDromEditorApp: wavedrom-cli
+:imagesoutdir: images
+:icons: font
+:lang: en
+:listing-caption: Listing
+:sectnums:
+:sectnumlevels: 5
+:toclevels: 5
+:toc: left
+:source-highlighter: pygments
+ifdef::backend-pdf[]
+:source-highlighter: coderay
+endif::[]
+:data-uri:
+:hide-uri-scheme:
+:stem: latexmath
+:footnote:
+:xrefstyle: short 
+
+= RISC-V Software Interrupt Device Specification
+:author: RISC-V Platform Specification Task Group
+:email: tech-unixplatformspec@lists.riscv.org
+
+// Preamble
+[WARNING]
+.This document is in the link:http://riscv.org/spec-state[Draft state]
+====
+Assume everything can change. This draft specification will change before 
+being accepted as standard, so implementations made to this draft 
+specification will likely not conform to the future standard.
+====
+
+// Table of contents
+toc::[]
+
+[preface]
+== Copyright and license information
+
+This RISC-V SWI device specification has been contributed directly or
+indirectly by:
+
+[%hardbreaks]
+* Greg Favor <gfavor@ventanamicro.com>
+* Anup Patel <apatel@ventanamicro.com>
+
+*NOTE:* Please add yourself to the above list if you have contributed to
+the RISC-V SWI device specification.
+
+It is licensed under the Creative Commons Attribution 4.0 International
+License (CC-BY 4.0). The full license text is available at
+https://creativecommons.org/licenses/by/4.0/.
+
+== Introduction
+
+This RISC-V Software Interrupt (SWI) device specification defines memory
+mapped devices which provide inter-processor interrupt (IPI) functionality.
+This IPI functionality is required by operating systems, bootloaders and
+firmwares running on a multi-HART RISC-V platform.
+
+The <<table_swi_device_list>> below shows the list of devices defined by
+the RISC-V SWI device specification. All devices defined by the RISC-V SWI
+device specification are optional for a RISC-V platform.
+
+[#table_swi_device_list]
+.SWI Devices
+[cols="1,5", width=95%, align="center", options="header"]
+|===
+| Name    | Description
+| MSWI    | Machine-level software interrupt device
+| SETSSWI | Supervisor-level software interrupt device
+|===
+
+== Machine-level Software Interrupt Device (MSWI)
+
+The MSWI device provides machine-level IPI functionality for a set of
+associated HARTs. It provide one IPI register (*MSIP*) for each associated
+HART. These memory-mapped *MSIP* registers that control the mip.MSIP in the
+associated HARTs are specified in the RISC-V Privileged v1.12 specification.
+
+[sidebar]
+--
+[underline]*_NOTE_*: A MSWI device groups multiple unrelated MSIP registers
+into one device for convenience. A RISC-V platform can also have a separate
+MSWI device for each HART with just one MSIP register per MSWI device.
+--
+
+On a RISC-V platform with multiple MSWI devices, each MSWI device provides
+machine-level IPI functionality for a different (or disjoint) set of HARTs.
+
+A MSWI device assigns a HART index starting from zero to each HART associated
+with it. The HART index assigned to a HART by the MSWI device may or may not
+have any relationship with the unique HART identifier (*hart ID*) that the
+RISC-V Privileged Architecture assigns to the HART.
+
+=== Register Map
+
+The base address of a MSWI device should be aligned to 4KB and various MSIP
+registers are organized as shown in <<table_mswi_register_list>> below.
+
+[#table_mswi_register_list]
+.MSWI Device Register Map
+[cols="2,1,1,2,4", width=95%, align="center", options="header"]
+|===
+| Offset      | Width | Attr | Name     | Description
+| 0x0000_0000 | 4B    | RW   | MSIP0    | HART index 0 machine-level IPI
+                                          register
+| 0x0000_0004 | 4B    | RW   | MSIP1    | HART index 1 machine-level IPI
+                                          register
+| ...         | ...   | ...  | ...      | ...
+|===
+
+=== MSIP Registers
+
+Each MSIP register is a 32-bit wide WARL register where the upper 31 bits
+are wired to zero. The least significant bit is reflected in MSIP of the
+`mip` CSR. A machine-level software interrupt for a HART is pending or
+cleared by writing `1` or `0` respectively to the corresponding MSIP
+register.
+
+On MSWI device reset, each MSIP register is cleared to zero.
+
+== Set Supervisor-level Software Interrupt Device (SETSSWI)
+
+The SETSSWI device provides supervisor-level IPI functionality for a set
+of associated HARTs. It provides one IPI register (*SETSSIP*) for each
+associated HART. This device also serves as the platform-specific interrupt
+controller for setting mip/sip.SSIP to 1 in associated HARTs as allowed in
+the RISC-V Privileged v1.12 specification. 
+
+[sidebar]
+--
+[underline]*_NOTE_*: A SETSSWI device groups multiple unrelated SETSSIP
+registers into one device for convenience. A RISC-V platform can also have
+a separate SETSSWI device for each HART with just one SETSSIP register per
+SETSSWI device.
+--
+
+On a RISC-V platform with multiple SETSSWI devices, each SETSSWI device
+provides supervisor-level IPI functionality for a different (or disjoint)
+set of HARTs.
+
+A SETSSWI device assigns a HART index starting from zero to each HART
+associated with it. The HART index assigned to a HART by the SETSSWI
+device may or may not have any relationship with the unique HART identifier
+(*hart ID*) that the RISC-V Privileged Architecture assigns to the HART.
+
+=== Register Map
+
+The base address of a SETSSWI device should be aligned to 4KB and various
+SETSSIP registers are organized as shown in <<table_setsswi_register_list>>
+below.
+
+[#table_setsswi_register_list]
+.SETSSWI Device Register Map
+[cols="2,1,1,2,4", width=95%, align="center", options="header"]
+|===
+| Offset      | Width | Attr | Name     | Description
+| 0x0000_0000 | 4B    | RW   | SETSSIP0 | HART index 0 set supervisor-level
+                                          IPI register
+| 0x0000_0004 | 4B    | RW   | SETSSIP1 | HART index 1 set supervisor-level
+                                          IPI register
+| ...         | ...   | ...  | ...      | ...
+|===
+
+=== SETSSIP Registers
+
+Each SETSSIP register is a 32-bit wide WARL register where the upper 31 bits
+are wired to zero. The least significant bit of a SETSSIP register always
+reads `0`. Writing `0` to the least significant bit of a SETSSIP register
+has no effect whereas writing `1` to the least significant bit sends an
+edge-sensitive interrupt signal to the corresponding HART causing the HART
+to set SSIP in the `mip` CSR. Writes to a SETSSIP register are guaranteed to
+be reflected in SSIP of the corresponding HART but not necessarily immediately.
+
+[sidebar]
+--
+[underline]*_NOTE_*: The RISC-V Privileged Architecture defines SSIP in
+`mip` and `sip` CSRs as a writeable bit so the M-mode or S-mode software
+can directly clear SSIP.
+--

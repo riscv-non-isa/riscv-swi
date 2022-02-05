@@ -1,21 +1,65 @@
-HEADER_SOURCE := header.adoc
-PDF_RESULT := example-spec.pdf
+#
+# Build usable documents
+#
 
-all: build
+ASCIIDOCTOR = asciidoctor
+ASCIIDOCTOR_PDF = $(ASCIIDOCTOR)-pdf
+DITAA = ditaa
+TARGETS = riscv-swi.pdf
+TARGETS += riscv-swi.html
 
-build:
+.PHONY: all
+all: $(IMAGES) $(TARGETS)
 
-	@echo "Building asciidoc"
-	asciidoctor-pdf \
-    --attribute=mathematical-format=svg \
-    --attribute=pdf-fontsdir=docs-resources/fonts \
-    --attribute=pdf-style=docs-resources/themes/riscv-pdf.yml \
-    --failure-level=ERROR \
-    --require=asciidoctor-bibtex \
-    --require=asciidoctor-diagram \
-    --require=asciidoctor-mathematical \
-    --out-file=$(PDF_RESULT) \
-    $(HEADER_SOURCE)
+%.png: %.ditaa
+	rm -f $@
+	$(DITAA) $<
 
+%.html: %.adoc $(IMAGES)
+	$(ASCIIDOCTOR) -d book -b html $<
+
+%.pdf: %.adoc $(IMAGES) docs-resources/themes/riscv-pdf.yml
+	$(ASCIIDOCTOR_PDF) \
+	-a toc \
+	-a compress \
+	-a pdf-style=docs-resources/themes/riscv-pdf.yml \
+	-a pdf-fontsdir=docs-resources/fonts \
+	-o $@ $<
+
+.PHONY: clean
 clean:
-	rm example-spec.pdf
+	rm -f $(TARGETS)
+
+.PHONY: install-debs
+install-debs:
+	sudo apt-get install pandoc asciidoctor ditaa ruby-asciidoctor-pdf coderay
+	sudo gem install 'asciidoctor'
+	sudo gem install 'asciidoctor-bibtex'
+	sudo gem install 'asciidoctor-diagram'
+	sudo gem install 'asciidoctor-mathematical'
+	sudo gem install 'asciidoctor-pdf'
+	sudo gem install 'citeproc-ruby'
+	sudo gem install 'coderay'
+	sudo gem install 'csl-styles'
+	sudo gem install 'json'
+	sudo gem install 'pygments.rb'
+	sudo gem install 'rghost'
+	sudo gem install 'rouge'
+	sudo gem install 'ruby_dev'
+
+.PHONY: install-rpms
+install-rpms:
+	sudo dnf install ditaa pandoc rubygem-asciidoctor rubygem-asciidoctor-pdf coderay
+	sudo gem install 'asciidoctor'
+	sudo gem install 'asciidoctor-bibtex'
+	sudo gem install 'asciidoctor-diagram'
+	sudo gem install 'asciidoctor-mathematical'
+	sudo gem install 'asciidoctor-pdf'
+	sudo gem install 'citeproc-ruby'
+	sudo gem install 'coderay'
+	sudo gem install 'csl-styles'
+	sudo gem install 'json'
+	sudo gem install 'pygments.rb'
+	sudo gem install 'rghost'
+	sudo gem install 'rouge'
+	sudo gem install 'ruby_dev'
